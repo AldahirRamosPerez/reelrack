@@ -1,0 +1,20 @@
+// lib/genreMapping.ts
+export const GENRE_MAPPING: Record<string, string[]> = {
+  "Acción": ["action", "acción", "adventure"],
+  "Aventura": ["adventure", "aventura"],
+  "Animación": ["animation", "animación", "animated"],
+  "Anime":[],
+  "Comedia": ["comedy", "comedia"],
+  "Drama": ["drama"],
+  "Fantasía": ["fantasy", "fantasía"],
+  "Ciencia Ficción": ["science fiction", "sci-fi", "sf", "ciencia ficción"],
+  "Terror": ["horror", "terror"],
+  "Suspense": ["thriller", "suspense"],
+  "Romance": ["romance"],
+  "Familiar": ["family", "familiar", "kids", "infantil"],
+  "Documental": ["documentary", "documental", "doc"],
+  "Musical": ["music", "musical"],
+  "Western": ["western"],
+  "Crimen": ["crime", "crimen"],
+  "Novelas":[],
+};
