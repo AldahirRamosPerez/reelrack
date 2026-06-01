@@ -25,10 +25,10 @@ export async function GET(request: NextRequest) {
     let sql = 'SELECT * FROM titles WHERE 1=1';
     const params: any[] = [];
 
-    function addCondition(condition: string, value: any) {
+    const addCondition = (condition: string, value: any) => {
       params.push(value);
       sql += ` ${condition} $${params.length}`;
-    }
+    };
 
     if (title && title.trim() !== '') addCondition('AND title ILIKE', `%${title.trim()}%`);
     if (media_type && media_type !== 'todos' && media_type !== '') {
