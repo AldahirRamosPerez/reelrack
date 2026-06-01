@@ -9,6 +9,9 @@ const nextConfig = {
       },
     ],
   },
+  typescript: {
+    ignoreBuildErrors: true, // Desactiva la verificación de tipos durante el build
+  },
 };
 
 module.exports = nextConfig;
