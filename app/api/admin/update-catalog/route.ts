@@ -42,7 +42,7 @@ async function fetchFromTMDB(endpoint: string, params: Record<string, any> = {})
 
 
 export async function POST(request: NextRequest) {
-  // Verificar autenticación de administrador
+  // Verificar autenticación...
   const authHeader = request.headers.get('authorization');
   const token = authHeader?.split(' ')[1];
   if (!token || !verifyAdminToken(token)) {
@@ -58,32 +58,16 @@ export async function POST(request: NextRequest) {
     const oneMonthAgo = getDate(30);
     const today = getDate(0);
 
-    // 1. Películas estrenadas en el último mes
-    const newMovies = await fetchFromTMDB('/discover/movie', {
-      'primary_release_date.gte': oneMonthAgo,
-      'primary_release_date.lte': today,
-      sort_by: 'primary_release_date.desc',
-      include_adult: false,
-    });
+    // Obtener datos de diferentes endpoints...
+    const [newMovies, newShows, onTheAir, trending, animeMovies, animeShows] = await Promise.all([
+      fetchFromTMDB('/discover/movie', { 'primary_release_date.gte': oneMonthAgo, 'primary_release_date.lte': today, sort_by: 'primary_release_date.desc', include_adult: false }),
+      fetchFromTMDB('/discover/tv', { 'first_air_date.gte': oneMonthAgo, 'first_air_date.lte': today, sort_by: 'first_air_date.desc' }),
+      fetchFromTMDB('/tv/on_the_air'),
+      fetchFromTMDB('/trending/all/week'),
+      fetchFromTMDB('/discover/movie', { with_keywords: '210024' }),
+      fetchFromTMDB('/discover/tv', { with_keywords: '210024' })
+    ]);
 
-    // 2. Series estrenadas en el último mes
-    const newShows = await fetchFromTMDB('/discover/tv', {
-      'first_air_date.gte': oneMonthAgo,
-      'first_air_date.lte': today,
-      sort_by: 'first_air_date.desc',
-    });
-
-    // 3. Series que se emiten actualmente (próximos 7 días)
-    const onTheAir = await fetchFromTMDB('/tv/on_the_air');
-
-    // 4. Tendencias de la semana (películas + series)
-    const trending = await fetchFromTMDB('/trending/all/week');
-
-    // 5. Anime (keyword id 210024)
-    const animeMovies = await fetchFromTMDB('/discover/movie', { with_keywords: '210024' });
-    const animeShows = await fetchFromTMDB('/discover/tv', { with_keywords: '210024' });
-
-    // Combinar y eliminar duplicados por external_id
     const allItems = [...newMovies, ...newShows, ...onTheAir, ...trending, ...animeMovies, ...animeShows];
     const uniqueMap = new Map();
     for (const item of allItems) {
@@ -93,8 +77,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Insertar en base de datos
-    for (const item of uniqueMap.values()) {
+    // Insertar en base de datos - VERSIÓN CORREGIDA
+    const itemsArray = Array.from(uniqueMap.values());
+    for (let i = 0; i < itemsArray.length; i++) {
+      const item = itemsArray[i];
       const title = item.title || item.name;
       const mediaType = item.media_type === 'movie' || (item.title && !item.name) ? 'movie' : 'tv';
       const year = (item.release_date || item.first_air_date || '').slice(0, 4);
@@ -103,7 +89,6 @@ export async function POST(request: NextRequest) {
       const overview = item.overview || '';
       const rating = item.vote_average;
 
-      // Verificar si ya existe por external_id
       const existing = await query('SELECT id FROM titles WHERE external_id = $1', [externalId]);
       if (existing.rows.length === 0) {
         await query(
@@ -119,13 +104,7 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`✅ Actualización completada. Agregados: ${addedCount}, Duplicados: ${duplicateCount}`);
-
-    return NextResponse.json({
-      success: true,
-      addedCount,
-      duplicateCount,
-      addedTitles: addedTitles.slice(0, 20), // solo primeros 20 para no saturar
-    });
+    return NextResponse.json({ success: true, addedCount, duplicateCount, addedTitles: addedTitles.slice(0, 20) });
   } catch (error) {
     console.error('Error en actualización automática:', error);
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
