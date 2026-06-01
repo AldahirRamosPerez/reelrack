@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { verifyAdminToken } from '@/lib/auth';
 
+
 const TMDB_API_KEY = process.env.TMDB_API_KEY;
+if (!TMDB_API_KEY) {
+  throw new Error('TMDB_API_KEY is not defined in environment variables');
+}
+
 const BASE_URL = 'https://api.themoviedb.org/3';
 
 function getDate(daysAgo: number = 0): string {
@@ -13,9 +18,20 @@ function getDate(daysAgo: number = 0): string {
 
 async function fetchFromTMDB(endpoint: string, params: Record<string, any> = {}) {
   const url = `${BASE_URL}${endpoint}`;
-  const allParams = { api_key: TMDB_API_KEY, language: 'es-MX', ...params };
+  const allParams: Record<string, string> = {
+    api_key: TMDB_API_KEY!,
+    language: 'es-MX',
+    ...params,
+  };
+  
+  // Convertir los parámetros a string de consulta manualmente
+  const queryString = Object.entries(allParams)
+    .filter(([_, value]) => value !== undefined && value !== null)
+    .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
+    .join('&');
+  
   try {
-    const response = await fetch(url + '?' + new URLSearchParams(allParams));
+    const response = await fetch(`${url}?${queryString}`);
     const data = await response.json();
     return data.results || [];
   } catch (error) {
@@ -23,6 +39,7 @@ async function fetchFromTMDB(endpoint: string, params: Record<string, any> = {})
     return [];
   }
 }
+
 
 export async function POST(request: NextRequest) {
   // Verificar autenticación de administrador
