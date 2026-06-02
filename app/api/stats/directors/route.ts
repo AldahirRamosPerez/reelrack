@@ -13,7 +13,7 @@ export async function GET() {
     `);
     return NextResponse.json(res.rows);
   } catch (error) {
-    console.error(error);
+    console.error('Error en directors:', error);
     return NextResponse.json([]);
   }
 }
